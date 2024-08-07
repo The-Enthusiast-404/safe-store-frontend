@@ -8,6 +8,7 @@ import {
 } from "@remix-run/react";
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { File, Trash2, Download, Upload } from "lucide-react";
 
 const BASE_URL = "http://localhost:4000/v1";
 
@@ -77,9 +78,10 @@ export const action: ActionFunction = async ({ request }) => {
         throw new Error(errorData.error || "Failed to delete files");
       }
 
+      const result = await response.json();
       return json({
         success: true,
-        message: `Successfully deleted ${filenames.length} file(s)`,
+        message: result.message,
       });
     } catch (error) {
       console.error("Error deleting files:", error);
@@ -146,6 +148,7 @@ export default function Index() {
       );
       formData.append("intent", "delete");
       submit(formData, { method: "post" });
+      setSelectedFiles(new Set()); // Clear selection after deletion
     }
   };
 
@@ -159,100 +162,158 @@ export default function Index() {
     navigation.state === "submitting" || navigation.state === "loading";
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">File Management</h1>
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-200 p-8">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
+        <div className="p-8">
+          <h1 className="text-4xl font-bold text-indigo-700 mb-6">
+            File Vault
+          </h1>
 
-      {(actionData?.error || loaderError) && (
-        <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
-          role="alert"
-        >
-          <strong className="font-bold">Error:</strong>
-          <span className="block sm:inline">
-            {" "}
-            {actionData?.error || loaderError}
-          </span>
-        </div>
-      )}
+          {(actionData?.error || loaderError) && (
+            <div
+              className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6"
+              role="alert"
+            >
+              <p className="font-bold">Error</p>
+              <p>{actionData?.error || loaderError}</p>
+            </div>
+          )}
 
-      {actionData?.success && (
-        <div
-          className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"
-          role="alert"
-        >
-          <strong className="font-bold">Success:</strong>
-          <span className="block sm:inline"> {actionData.message}</span>
-        </div>
-      )}
+          {actionData?.success && (
+            <div
+              className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6"
+              role="alert"
+            >
+              <p className="font-bold">Success</p>
+              <p>{actionData.message}</p>
+            </div>
+          )}
 
-      <Form
-        method="post"
-        encType="multipart/form-data"
-        onSubmit={handleUpload}
-        className="mb-8"
-      >
-        <div className="flex items-center space-x-4">
-          <input
-            type="file"
-            name="file"
-            onChange={handleFileChange}
-            className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            disabled={isLoading || !selectedFile}
+          <Form
+            method="post"
+            encType="multipart/form-data"
+            onSubmit={handleUpload}
+            className="mb-8"
           >
-            {isLoading ? "Uploading..." : "Upload"}
-          </button>
-        </div>
-      </Form>
-
-      <h2 className="text-2xl font-semibold mb-4">Files:</h2>
-      {isLoading ? (
-        <p>Loading...</p>
-      ) : files && files.length > 0 ? (
-        <>
-          <div className="mb-4 space-x-2">
-            <button
-              onClick={handleDownload}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-              disabled={selectedFiles.size === 0}
-            >
-              Download Selected
-            </button>
-            <button
-              onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-              disabled={selectedFiles.size === 0}
-            >
-              Delete Selected
-            </button>
-          </div>
-          <ul className="space-y-2">
-            {files.map((file) => (
-              <li
-                key={file.name}
-                className="bg-gray-100 p-4 rounded-lg flex justify-between items-center"
-              >
-                <div className="flex items-center space-x-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedFiles.has(file.name)}
-                    onChange={() => handleFileSelection(file.name)}
-                    className="form-checkbox h-5 w-5 text-blue-600"
-                  />
-                  <span>
-                    {file.name} ({file.size} bytes)
+            <div className="flex items-center space-x-4">
+              <label className="flex-1">
+                <input
+                  type="file"
+                  name="file"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <div className="flex items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-indigo-600 focus:outline-none">
+                  <span className="flex items-center space-x-2">
+                    <Upload size={24} className="text-indigo-600" />
+                    <span className="font-medium text-gray-600">
+                      {selectedFile
+                        ? selectedFile.name
+                        : "Select a file to upload"}
+                    </span>
                   </span>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p className="text-gray-600">No files found.</p>
-      )}
+              </label>
+              <button
+                type="submit"
+                className="flex items-center justify-center h-12 px-6 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={isLoading || !selectedFile}
+              >
+                {isLoading ? (
+                  <span className="flex items-center">
+                    <svg
+                      className="w-5 h-5 mr-3 -ml-1 text-white animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Uploading
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <Upload size={20} className="mr-2" />
+                    Upload
+                  </span>
+                )}
+              </button>
+            </div>
+          </Form>
+
+          <div className="bg-gray-50 rounded-lg p-6">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+              Your Files
+            </h2>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : files && files.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-4 mb-6">
+                  <button
+                    onClick={handleDownload}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={selectedFiles.size === 0}
+                  >
+                    <Download size={16} className="mr-2" />
+                    Download Selected
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={selectedFiles.size === 0}
+                  >
+                    <Trash2 size={16} className="mr-2" />
+                    Delete Selected
+                  </button>
+                </div>
+                <ul className="space-y-2">
+                  {files.map((file) => (
+                    <li
+                      key={file.name}
+                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedFiles.has(file.name)}
+                          onChange={() => handleFileSelection(file.name)}
+                          className="form-checkbox h-5 w-5 text-indigo-600 transition duration-150 ease-in-out"
+                        />
+                        <File size={24} className="text-indigo-600" />
+                        <span className="font-medium text-gray-700">
+                          {file.name}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {(file.size / 1024).toFixed(2)} KB
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="text-gray-600 text-center py-8">
+                No files found. Upload some files to get started!
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
 } from "@remix-run/react";
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunction, LoaderFunction } from "@remix-run/node";
-import { File, Trash2, Download, Upload } from "lucide-react";
+import { File as FileIcon, Trash2, Download, Upload, Eye } from "lucide-react";
 
 const BASE_URL = "http://localhost:4000/v1";
 
@@ -95,6 +95,64 @@ export const action: ActionFunction = async ({ request }) => {
   return json({ error: "Invalid action" }, { status: 400 });
 };
 
+interface FilePreviewModalProps {
+  file: { name: string; url: string; type: string };
+  onClose: () => void;
+}
+
+const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
+  file,
+  onClose,
+}) => {
+  const isImage = file.type.startsWith("image/");
+  const isPDF = file.type === "application/pdf";
+  const isText = file.type === "text/plain";
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-4 max-w-4xl max-h-[90vh] w-full overflow-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">{file.name}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <FileIcon size={24} />
+          </button>
+        </div>
+        <div className="preview-content">
+          {isImage && (
+            <img
+              src={file.url}
+              alt={file.name}
+              className="max-w-full max-h-[70vh] mx-auto"
+            />
+          )}
+          {isPDF && (
+            <iframe
+              src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(
+                file.url
+              )}`}
+              title={file.name}
+              className="w-full h-[70vh]"
+            />
+          )}
+          {isText && (
+            <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded">
+              {file.url}
+            </pre>
+          )}
+          {!isImage && !isPDF && !isText && (
+            <p className="text-center text-gray-500">
+              Preview not available for this file type.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Index() {
   const { files, error: loaderError } = useLoaderData<{
     files: Array<{ name: string; size: number }>;
@@ -104,6 +162,11 @@ export default function Index() {
   const navigation = useNavigation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [previewFile, setPreviewFile] = useState<{
+    name: string;
+    url: string;
+    type: string;
+  } | null>(null);
   const submit = useSubmit();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,6 +218,19 @@ export default function Index() {
   const handleDownload = () => {
     selectedFiles.forEach((filename) => {
       window.open(`${BASE_URL}/download/${filename}`, "_blank");
+    });
+  };
+
+  const handlePreview = (file: { name: string; size: number }) => {
+    setPreviewFile({
+      name: file.name,
+      url: `${BASE_URL}/download/${file.name}`,
+      type:
+        file.name.split(".").pop()?.toLowerCase() === "pdf"
+          ? "application/pdf"
+          : file.name.split(".").pop()?.toLowerCase() === "txt"
+          ? "text/plain"
+          : "image/*",
     });
   };
 
@@ -294,14 +370,22 @@ export default function Index() {
                           onChange={() => handleFileSelection(file.name)}
                           className="form-checkbox h-5 w-5 text-indigo-600 transition duration-150 ease-in-out"
                         />
-                        <File size={24} className="text-indigo-600" />
+                        <FileIcon size={24} className="text-indigo-600" />
                         <span className="font-medium text-gray-700">
                           {file.name}
                         </span>
                       </div>
-                      <span className="text-sm text-gray-500">
-                        {(file.size / 1024).toFixed(2)} KB
-                      </span>
+                      <div className="flex items-center space-x-4">
+                        <span className="text-sm text-gray-500">
+                          {(file.size / 1024).toFixed(2)} KB
+                        </span>
+                        <button
+                          onClick={() => handlePreview(file)}
+                          className="text-indigo-600 hover:text-indigo-800"
+                        >
+                          <Eye size={20} />
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -314,6 +398,13 @@ export default function Index() {
           </div>
         </div>
       </div>
+
+      {previewFile && (
+        <FilePreviewModal
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
     </div>
   );
 }

@@ -10,11 +10,11 @@ import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { FileList } from "app/components/FileList";
 import { UploadForm } from "app/components/UploadForm";
 import GridView from "app/components/GridView";
-import FilePreviewModal from "app/components/FilePreview";
+import { FilePreviewModal } from "app/components/FilePreview";
 import { ActionMessages } from "app/components/ActionMessages";
 import { getFileType } from "app/utils/fileHelpers";
 import type { FileType } from "app/types/file";
-import { Grid, List } from "lucide-react";
+import { Grid, List, Download, Trash2 } from "lucide-react";
 
 const BASE_URL = "http://localhost:4000/v1";
 
@@ -109,11 +109,7 @@ export default function Index() {
   const actionData = useActionData();
   const navigation = useNavigation();
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [previewFile, setPreviewFile] = useState<{
-    name: string;
-    url: string;
-    type: string;
-  } | null>(null);
+  const [previewFile, setPreviewFile] = useState<FileType | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const submit = useSubmit();
 
@@ -153,11 +149,7 @@ export default function Index() {
   };
 
   const handlePreview = (file: FileType) => {
-    setPreviewFile({
-      name: file.name,
-      url: `${BASE_URL}/download/${file.name}`,
-      type: getFileType(file.name),
-    });
+    setPreviewFile(file);
   };
 
   const handleViewModeChange = (mode: "list" | "grid") => {
@@ -213,6 +205,25 @@ export default function Index() {
               </div>
             </div>
 
+            <div className="flex flex-wrap gap-4 mb-6">
+              <button
+                onClick={handleDownload}
+                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={selectedFiles.size === 0}
+              >
+                <Download size={16} className="mr-2" />
+                Download Selected
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={selectedFiles.size === 0}
+              >
+                <Trash2 size={16} className="mr-2" />
+                Delete Selected
+              </button>
+            </div>
+
             {isLoading ? (
               <div className="flex justify-center items-center h-32">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -223,12 +234,15 @@ export default function Index() {
                   files={files}
                   selectedFiles={selectedFiles}
                   onFileSelection={handleFileSelection}
-                  onDownload={handleDownload}
-                  onDelete={handleDelete}
                   onPreview={handlePreview}
                 />
               ) : (
-                <GridView files={files} onPreview={handlePreview} />
+                <GridView
+                  files={files}
+                  onPreview={handlePreview}
+                  selectedFiles={selectedFiles}
+                  onFileSelection={handleFileSelection}
+                />
               )
             ) : (
               <p className="text-gray-600 text-center py-8">
@@ -241,7 +255,11 @@ export default function Index() {
 
       {previewFile && (
         <FilePreviewModal
-          file={previewFile}
+          file={{
+            name: previewFile.name,
+            url: `${BASE_URL}/download/${previewFile.name}`,
+            type: getFileType(previewFile.name),
+          }}
           onClose={() => setPreviewFile(null)}
         />
       )}

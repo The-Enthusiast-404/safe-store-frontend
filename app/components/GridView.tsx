@@ -1,15 +1,22 @@
 import React from "react";
 import { File as FileIcon, Image, FileText } from "lucide-react";
+import type { FileType } from "../types/file";
 
 interface FileProps {
-  name: string;
-  size: number;
-  onPreview: () => void;
+  file: FileType;
+  onPreview: (file: FileType) => void;
+  isSelected: boolean;
+  onFileSelection: (filename: string) => void;
 }
 
-const FileCard: React.FC<FileProps> = ({ name, size, onPreview }) => {
+const FileCard: React.FC<FileProps> = ({
+  file,
+  onPreview,
+  isSelected,
+  onFileSelection,
+}) => {
   const getFileIcon = () => {
-    const extension = name.split(".").pop()?.toLowerCase();
+    const extension = file.name.split(".").pop()?.toLowerCase();
     switch (extension) {
       case "jpg":
       case "jpeg":
@@ -34,32 +41,53 @@ const FileCard: React.FC<FileProps> = ({ name, size, onPreview }) => {
   };
 
   return (
-    <button
-      className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow duration-200 flex flex-col items-center cursor-pointer w-full text-left"
-      onClick={onPreview}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onPreview();
-        }
-      }}
-      aria-label={`Preview ${name}, size: ${(size / 1024).toFixed(2)} KB`}
-    >
-      {getFileIcon()}
-      <p className="mt-2 text-sm font-medium text-gray-900 text-center truncate w-full">
-        {name}
-      </p>
-      <p className="text-xs text-gray-500">{(size / 1024).toFixed(2)} KB</p>
-    </button>
+    <div className="relative">
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={() => onFileSelection(file.name)}
+        className="absolute top-2 left-2 form-checkbox h-5 w-5 text-indigo-600 transition duration-150 ease-in-out z-10"
+      />
+      <button
+        className={`bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow duration-200 flex flex-col items-center cursor-pointer w-full text-left ${
+          isSelected ? "ring-2 ring-indigo-500" : ""
+        }`}
+        onClick={() => onPreview(file)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onPreview(file);
+          }
+        }}
+        aria-label={`Preview ${file.name}, size: ${(file.size / 1024).toFixed(
+          2
+        )} KB`}
+      >
+        {getFileIcon()}
+        <p className="mt-2 text-sm font-medium text-gray-900 text-center truncate w-full">
+          {file.name}
+        </p>
+        <p className="text-xs text-gray-500">
+          {(file.size / 1024).toFixed(2)} KB
+        </p>
+      </button>
+    </div>
   );
 };
 
 interface GridViewProps {
-  files: Array<{ name: string; size: number }>;
-  onPreview: (file: { name: string; size: number }) => void;
+  files: FileType[];
+  onPreview: (file: FileType) => void;
+  selectedFiles: Set<string>;
+  onFileSelection: (filename: string) => void;
 }
 
-const GridView: React.FC<GridViewProps> = ({ files, onPreview }) => {
+const GridView: React.FC<GridViewProps> = ({
+  files,
+  onPreview,
+  selectedFiles,
+  onFileSelection,
+}) => {
   return (
     <div
       className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
@@ -69,9 +97,10 @@ const GridView: React.FC<GridViewProps> = ({ files, onPreview }) => {
       {files.map((file) => (
         <div key={file.name} role="gridcell">
           <FileCard
-            name={file.name}
-            size={file.size}
-            onPreview={() => onPreview(file)}
+            file={file}
+            onPreview={onPreview}
+            isSelected={selectedFiles.has(file.name)}
+            onFileSelection={onFileSelection}
           />
         </div>
       ))}

@@ -1,6 +1,46 @@
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
-const FilePreviewModal = ({ file, onClose }) => {
+interface FilePreviewModalProps {
+  file: { name: string; url: string; type: string };
+  onClose: () => void;
+}
+
+export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
+  file,
+  onClose,
+}) => {
+  const [content, setContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchFileContent = async () => {
+      try {
+        const response = await fetch(file.url);
+        if (!response.ok) {
+          throw new Error("Failed to fetch file");
+        }
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        setContent(objectUrl);
+      } catch (err) {
+        setError("Failed to load file preview");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFileContent();
+
+    return () => {
+      if (content) {
+        URL.revokeObjectURL(content);
+      }
+    };
+  }, [file.url]);
+
   const isImage = file.type.startsWith("image/");
   const isPDF = file.type === "application/pdf";
   const isText = file.type === "text/plain";
@@ -18,34 +58,40 @@ const FilePreviewModal = ({ file, onClose }) => {
           </button>
         </div>
         <div className="preview-content">
-          {isImage && (
-            <img
-              src={URL.createObjectURL(file)}
-              alt={file.name}
-              className="max-w-full max-h-[70vh] mx-auto"
-            />
-          )}
-          {isPDF && (
-            <iframe
-              src={URL.createObjectURL(file)}
-              title={file.name}
-              className="w-full h-[70vh]"
-            />
-          )}
-          {isText && (
-            <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded">
-              {file.content}
-            </pre>
-          )}
-          {!isImage && !isPDF && !isText && (
-            <p className="text-center text-gray-500">
-              Preview not available for this file type.
-            </p>
+          {loading && <p>Loading preview...</p>}
+          {error && <p className="text-red-500">{error}</p>}
+          {!loading && !error && (
+            <>
+              {isImage && (
+                <img
+                  src={content!}
+                  alt={file.name}
+                  className="max-w-full max-h-[70vh] mx-auto"
+                />
+              )}
+              {isPDF && (
+                <iframe
+                  src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(
+                    content!
+                  )}`}
+                  title={file.name}
+                  className="w-full h-[70vh]"
+                />
+              )}
+              {isText && (
+                <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded">
+                  {content}
+                </pre>
+              )}
+              {!isImage && !isPDF && !isText && (
+                <p className="text-center text-gray-500">
+                  Preview not available for this file type.
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
     </div>
   );
 };
-
-export default FilePreviewModal;

@@ -1,48 +1,24 @@
-import type { MetaFunction } from "@remix-run/node";
-
-export const meta: MetaFunction = () => {
-  return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
-  ];
-};
+import { Link } from "@remix-run/react";
+import Header from "~/components/Header";
 
 export default function Index() {
   return (
-    <div className="font-sans p-4">
-      <h1 className="text-3xl">Welcome to Remix</h1>
-      <ul className="list-disc mt-4 pl-6 space-y-2">
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://remix.run/start/quickstart"
-            rel="noreferrer"
-          >
-            5m Quick Start
-          </a>
-        </li>
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://remix.run/start/tutorial"
-            rel="noreferrer"
-          >
-            30m Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://remix.run/docs"
-            rel="noreferrer"
-          >
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+    <div className="min-h-screen bg-gray-100">
+      <Header />
+      <main className="container mx-auto px-4 py-8">
+        <h1 className="text-4xl font-bold mb-4">
+          Welcome to Your Cloud Storage
+        </h1>
+        <p className="text-xl mb-6">
+          Secure, private, and open-source cloud storage solution.
+        </p>
+        <Link
+          to="/files"
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+        >
+          View Files
+        </Link>
+      </main>
     </div>
   );
 }
